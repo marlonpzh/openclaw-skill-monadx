@@ -1,0 +1,29 @@
+{
+  "name": "openclaw-skill-monadx",
+  "version": "0.1.0",
+  "description": "Decentralized P2P job matching skill for OpenClaw",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/index.ts",
+    "test": "tsx test/index.test.ts",
+    "test:int": "tsx test/integration/run.ts",
+    "test:all": "tsx test/index.test.ts && tsx test/integration/run.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.78.0",
+    "gun": "^0.2020.1240",
+    "node-datachannel": "^0.32.1",
+    "tweetnacl": "^1.0.3",
+    "tweetnacl-util": "^0.15.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.4.0"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}

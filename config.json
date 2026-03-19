@@ -1,0 +1,46 @@
+{
+  "_comment": "P2P Jobs skill configuration. Copy to ~/.monadx/config.json",
+
+  "role": "seeker",
+
+  "network": {
+    "bootstrap_peers": [
+      "https://gun-manhattan.herokuapp.com/gun",
+      "https://gun-us.herokuapp.com/gun"
+    ],
+    "broadcast_interval_seconds": 21600,
+    "peer_ttl_seconds": 86400,
+    "max_cached_peers": 500
+  },
+
+  "matching": {
+    "tier1_top_n": 20,
+    "tier2_top_n": 5,
+    "min_score_threshold": 10,
+    "weights": {
+      "skill_jaccard": 0.40,
+      "skill_in_doc":  0.20,
+      "salary":        0.20,
+      "location":      0.20
+    }
+  },
+
+  "handshake": {
+    "proposal_timeout_seconds": 259200,
+    "stun_servers": [
+      "stun:stun.l.google.com:19302",
+      "stun:stun1.l.google.com:19302"
+    ]
+  },
+
+  "reputation": {
+    "bft_sigma_threshold": 2.0,
+    "anon_vector_noise": 0.05
+  },
+
+  "mcp": {
+    "model": "claude-sonnet-4-20250514",
+    "max_tokens": 512,
+    "use_openclaw_bridge_if_available": true
+  }
+}

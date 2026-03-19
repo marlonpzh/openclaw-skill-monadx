@@ -1,0 +1,27 @@
+node_modules/
+dist/
+.env
+
+# MacOS
+.DS_Store
+
+# Logs
+logs
+*.log
+npm-debug.log*
+
+# 临时测试目录
+p2pjobs-int-*/
+p2pjobs-relay-*/
+p2pjobs-test-*/
+
+# IDE
+.idea/
+.vscode/
+
+# OpenClaw 默认配置 (虽然在 ~/.monadx，但为了防止意外还是写一下)
+profile.json
+matches.json
+im_bindings.json
+reputation.json
+keys/
