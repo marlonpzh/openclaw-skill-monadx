@@ -55,6 +55,11 @@ The absolute easiest way to deploy MonadX into your existing OpenClaw setup is t
 curl -fsSL https://raw.githubusercontent.com/marlonpzh/openclaw-skill-monadx/main/install.sh | bash
 ```
 
+> **Note**: If your OpenClaw skills directory is located somewhere other than the default `~/.openclaw/skills`, you can specify a custom path using `DEST_DIR` before the `bash` command:
+> ```bash
+> curl -fsSL https://raw.githubusercontent.com/marlonpzh/openclaw-skill-monadx/main/install.sh | DEST_DIR=/your/custom/skills/path bash
+> ```
+
 Once installed, **you don't need to manually run any terminal commands.** Just talk to your OpenClaw agent in any IM channel:
 - *"I am looking for a job as a Node.js engineer in Tokyo."*
 - *"I am an employer. Help me broadcast a JD for a senior algorithm engineer."*

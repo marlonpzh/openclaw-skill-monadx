@@ -3,8 +3,11 @@ set -e
 
 echo "🚀 Installing MonadX Engine into your OpenClaw..."
 
-# Define the default OpenClaw skills directory
-SKILL_DIR="$HOME/.openclaw/skills/monadx"
+# Allow users to override the base skills directory via the DEST_DIR environment variable
+BASE_DIR="${DEST_DIR:-$HOME/.openclaw/skills}"
+SKILL_DIR="$BASE_DIR/monadx"
+
+echo "📂 Target installation directory: $SKILL_DIR"
 
 # Check if the directory already exists
 if [ -d "$SKILL_DIR" ]; then
@@ -13,7 +16,7 @@ if [ -d "$SKILL_DIR" ]; then
   git pull origin main
 else
   echo "📥 Cloning MonadX repository..."
-  mkdir -p "$HOME/.openclaw/skills"
+  mkdir -p "$BASE_DIR"
   git clone https://github.com/marlonpzh/openclaw-skill-monadx.git "$SKILL_DIR"
   cd "$SKILL_DIR"
 fi
