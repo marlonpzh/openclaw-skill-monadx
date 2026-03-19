@@ -24,6 +24,22 @@ fi
 echo "⚙️ Installing dependencies..."
 npm install > /dev/null 2>&1
 
+echo "📁 Bootstrapping MonadX User Data Directory (~/.monadx)..."
+MONADX_DATA_DIR="$HOME/.monadx"
+mkdir -p "$MONADX_DATA_DIR"
+
+if [ ! -f "$MONADX_DATA_DIR/config.json" ]; then
+  cp config.json "$MONADX_DATA_DIR/config.json"
+fi
+
+if [ ! -f "$MONADX_DATA_DIR/resume.md" ]; then
+  echo -e "# 张三 — 寻求全栈开发岗位\n\nSkills: Node.js, React, TypeScript\nLocation: Remote\nSalary: 20-30k\n\n(Edit this file to build your precise seeker profile!)" > "$MONADX_DATA_DIR/resume.md"
+fi
+
+if [ ! -f "$MONADX_DATA_DIR/jd.md" ]; then
+  echo -e "# 招聘：高级算法工程师\n\nSkills: PyTorch, AI, C++\nLocation: Beijing\nSalary: 30-50k\n\n(Edit this file to build your precisely targeted employer JD!)" > "$MONADX_DATA_DIR/jd.md"
+fi
+
 echo "✅ Installation Complete! MonadX is now integrated into OpenClaw."
 echo ""
 echo "🔥 What to do next:"
