@@ -5,28 +5,29 @@
 // Also doubles as a standalone CLI for development / testing.
 // ─────────────────────────────────────────────
 
-import { join }     from "path";
+import { join } from "path";
 import { mkdirSync } from "fs";
-import { homedir }  from "os";
+import { homedir } from "os";
 
 import type { SkillAction, MatchResult } from "./types.js";
-import { loadConfig }                    from "./config.js";
-import { loadOrCreateIdentity }          from "./identity.js";
-import { buildProfile, toBroadcast }     from "./profile.js";
-import { P2PNetwork }                    from "./network.js";
-import { localMatch }                    from "./match.js";
-import { HandshakeManager }              from "./handshake.js";
-import { ReputationStore }               from "./reputation.js";
+import { loadConfig } from "./config.js";
+import { loadOrCreateIdentity } from "./identity.js";
+import { buildProfile, toBroadcast } from "./profile.js";
+import { P2PNetwork } from "./network.js";
+import { localMatch } from "./match.js";
+import { HandshakeManager } from "./handshake.js";
+import { ReputationStore } from "./reputation.js";
 import { deepMatchBatch, formatDeepMatchResults } from "./mcp.js";
-import { installWebRTCPolyfill }         from "./webrtc-polyfill.js";
-import { IMBridge }                      from "./im-bridge.js";
-import { BroadcastScheduler }            from "./scheduler.js";
+import { installWebRTCPolyfill } from "./webrtc-polyfill.js";
+import { IMBridge } from "./im-bridge.js";
+import { BroadcastScheduler } from "./scheduler.js";
 
 // ── Boot ──────────────────────────────────────────────────────────────────
 
 installWebRTCPolyfill();
 
-const DATA_DIR = join(homedir(), ".openclaw", "jobs");
+const DATA_DIR = join(homedir(), ".monadx");
+
 mkdirSync(DATA_DIR, { recursive: true });
 
 const cfg = loadConfig(DATA_DIR);
@@ -38,9 +39,9 @@ const keyPair = loadOrCreateIdentity(DATA_DIR);
 const profile = buildProfile(DATA_DIR, NODE_ROLE, keyPair);
 
 const network = new P2PNetwork({
-  nodeId:  keyPair.nodeId,
+  nodeId: keyPair.nodeId,
   dataDir: DATA_DIR,
-  peers:   cfg.network.bootstrap_peers,
+  peers: cfg.network.bootstrap_peers,
   ttlSeconds: cfg.network.peer_ttl_seconds,
 });
 
@@ -57,9 +58,9 @@ const handshake = new HandshakeManager({
 const receivedDocs = new Map<string, string>();
 
 const imBridge = new IMBridge({
-  dataDir:  DATA_DIR,
+  dataDir: DATA_DIR,
   myNodeId: keyPair.nodeId,
-  myTitle:  profile.title,
+  myTitle: profile.title,
 });
 
 handshake.onDocumentReceived = async (docText, peerNodeId) => {
@@ -106,13 +107,13 @@ export async function run(action: SkillAction): Promise<string> {
     }
 
     case "deep_match": {
-      const topN  = action.top_n ?? cfg.matching.tier2_top_n;
+      const topN = action.top_n ?? cfg.matching.tier2_top_n;
       const peers = network.loadCachedPeers();
       if (peers.length === 0) {
         return "No peers discovered yet. Try again shortly.";
       }
       const localResult = localMatch(profile, peers);
-      const candidates  = localResult.peers
+      const candidates = localResult.peers
         .filter((p) => (p.score ?? 0) >= cfg.matching.min_score_threshold)
         .slice(0, topN);
       if (candidates.length === 0) {
@@ -150,9 +151,9 @@ export async function run(action: SkillAction): Promise<string> {
     }
 
     case "status": {
-      const peers   = network.loadCachedPeers();
-      const conns   = handshake.getStatus();
-      const repAll  = reputation.getAll();
+      const peers = network.loadCachedPeers();
+      const conns = handshake.getStatus();
+      const repAll = reputation.getAll();
       return [
         `── Node ───────────────────────────────────`,
         `  ID:    ${keyPair.nodeId.slice(0, 32)}…`,
@@ -302,12 +303,12 @@ if (isCLI) {
 }
 
 async function runCLI(args: string[]): Promise<void> {
-  const cmd  = args[0] ?? "help";
+  const cmd = args[0] ?? "help";
   const rest = args.slice(1);
 
   // status/match/deepmatch 需要等 Gun.js 初始化和同步
   const WAIT_CMDS = new Set(["match", "deepmatch", "status"]);
-  const delay     = WAIT_CMDS.has(cmd) ? 3000 : 0;
+  const delay = WAIT_CMDS.has(cmd) ? 3000 : 0;
 
   if (cmd === "help" || cmd === "--help" || cmd === "-h") {
     printHelp();
@@ -319,11 +320,11 @@ async function runCLI(args: string[]): Promise<void> {
   let action: SkillAction;
 
   switch (cmd) {
-    case "status":    action = { type: "status" };    break;
-    case "match":     action = { type: "match" };     break;
+    case "status": action = { type: "status" }; break;
+    case "match": action = { type: "match" }; break;
     case "broadcast": action = { type: "broadcast" }; break;
-    case "channels":  action = { type: "channels" };  break;
-    case "rep":       action = { type: "reputation", peer_node_id: rest[0] ? resolveNodeId(rest[0]) : "" }; break;
+    case "channels": action = { type: "channels" }; break;
+    case "rep": action = { type: "reputation", peer_node_id: rest[0] ? resolveNodeId(rest[0]) : "" }; break;
 
     case "deepmatch":
       action = { type: "deep_match", top_n: rest[0] ? parseInt(rest[0]) : undefined };
