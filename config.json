@@ -5,12 +5,18 @@
 
   "network": {
     "bootstrap_peers": [
-      "https://gun-manhattan.herokuapp.com/gun",
-      "https://gun-us.herokuapp.com/gun"
+      "http://118.178.88.178:8765/gun"
     ],
-    "broadcast_interval_seconds": 21600,
-    "peer_ttl_seconds": 86400,
+    "peer_ttl_seconds": 172800,
     "max_cached_peers": 500
+  },
+
+  "broadcast": {
+    "active_hours": [9, 22],
+    "hot_start_count": 6,
+    "hot_start_interval_sec": 300,
+    "steady_interval_sec": 14400,
+    "sleep_interval_sec": 43200
   },
 
   "matching": {
