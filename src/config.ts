@@ -66,8 +66,7 @@ const DEFAULTS: SkillConfig = {
 
   network: {
     bootstrap_peers: [
-      "https://gun-manhattan.herokuapp.com/gun",
-      "https://gun-us.herokuapp.com/gun",
+      "http://118.178.88.178:8765/gun" // Default high-speed Aliyun dedicated relay
     ],
     peer_ttl_seconds:  172800, // 48 h
     max_cached_peers:  500,
