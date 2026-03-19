@@ -48,31 +48,19 @@ Your resume.md          Peer's jd.md
 
 ## Quick start
 
+The absolute easiest way to deploy MonadX into your existing OpenClaw setup is to run our one-line installer:
+
 ```bash
-# 1. Install
-git clone <repo>
-cd openclaw-skill-monadx
-npm install
-
-# 2. Set your role (seeker = looking for work, employer = hiring)
-export monadx_ROLE=seeker        # or employer
-
-# 3. Edit your document (created automatically on first run)
-# For seekers:
-nano ~/.monadx/resume.md
-# For employers:
-nano ~/.monadx/jd.md
-
-# 4. Check status and broadcast your profile
-npx tsx src/index.ts status
-npx tsx src/index.ts broadcast
-
-# 5. Wait a moment for the network to sync, then match
-npx tsx src/index.ts match
-
-# 6. Propose a connection using the match index number
-npx tsx src/index.ts propose 1 "Hi, I am interested in this role!"
+# This automatically clones the repo into ~/.openclaw/skills/monadx and installs dependencies
+curl -fsSL https://raw.githubusercontent.com/marlonpzh/openclaw-skill-monadx/main/install.sh | bash
 ```
+
+Once installed, **you don't need to manually run any terminal commands.** Just talk to your OpenClaw agent in any IM channel:
+- *"I am looking for a job as a Node.js engineer in Tokyo."*
+- *"I am an employer. Help me broadcast a JD for a senior algorithm engineer."*
+
+The OpenClaw Agent autonomously parses your intent, edits your `~/.monadx/config.json`, extracts your core skills into a strict Markdown format (`~/.monadx/resume.md`), and launches the background DHT syncing protocol (`status` command).
+
 
 ---
 
