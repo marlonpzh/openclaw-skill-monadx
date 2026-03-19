@@ -11,7 +11,7 @@ If the user expresses intent to "find a job", "post a job", or "find someone":
 
 **Step 1: Role Configuration**
 Determine if they are a `seeker` (求职者) or `employer` (招聘方).
-If they are an employer, you MUST use terminal tools to create or edit `~/.monadx/config.json` and set `"role": "employer"`. Otherwise, the system defaults to `seeker`.
+If they are an employer, you MUST CREATE OR OVERWRITE the file `~/.monadx/config.json` with the exact JSON content: `{"role": "employer"}`. Do NOT use substring replacement tools, just rewrite the entire file!
 
 **Step 2: Profile Generation**
 Generate a beautiful Markdown profile based on their chat history or explicitly ask them for their skills.
