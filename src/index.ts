@@ -48,8 +48,10 @@ if (process.env.MONADX_PUSH_URL && process.env.MONADX_PUSH_URL !== cfg.network.p
     console.log(`[config] 🛡️ IM Push EndPoint 已自动绑定: ${cfg.network.push_webhook}`);
     
     // Auto-Restart Daemon if we are in CLI mode to ensure it picks up the change
-    const { exec } = await import("child_process");
-    exec("pm2 restart monadx-agent > /dev/null 2>&1 || true");
+    if (!process.argv.includes("stop")) {
+      const { exec } = await import("child_process");
+      exec("pm2 restart monadx-agent > /dev/null 2>&1 || true");
+    }
   } catch (err) {
     // Ignore FS errors in read-only environments
   }
@@ -403,6 +405,7 @@ async function runCLI(args: string[]): Promise<void> {
       import("child_process").then(({ execSync }) => {
         try { execSync("pm2 stop monadx-agent >/dev/null 2>&1"); } catch {}
         console.log("✅ 守护进程已关闭，你现在处于离线隐身状态。");
+        process.exit(0);
       });
       return;
 

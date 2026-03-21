@@ -160,6 +160,10 @@ function deepMerge(base: unknown, override: unknown): unknown {
     return override ?? base;
   }
 
+  if (Array.isArray(base) || Array.isArray(override)) {
+    return Array.isArray(override) ? override : base;
+  }
+
   const result: Record<string, unknown> = { ...(base as Record<string, unknown>) };
   for (const [key, val] of Object.entries(override as Record<string, unknown>)) {
     result[key] = deepMerge(result[key], val);
