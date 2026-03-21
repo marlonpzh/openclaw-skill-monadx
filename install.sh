@@ -40,6 +40,17 @@ if [ ! -f "$MONADX_DATA_DIR/jd.md" ]; then
   echo -e "# 招聘：高级算法工程师\n\nSkills: PyTorch, AI, C++\nLocation: Beijing\nSalary: 30-50k\n\n(Edit this file to build your precisely targeted employer JD!)" > "$MONADX_DATA_DIR/jd.md"
 fi
 
+echo "🛡️ Installing System Daemon (PM2) to keep MonadX online 24/7..."
+npm install -g pm2 > /dev/null 2>&1 || echo "⚠️ PM2 install skipped (requires sudo or node mismatch). MonadX might not autorun."
+
+if command -v pm2 >/dev/null 2>&1; then
+  echo "⚡ Spinning up MonadX Core Node in background..."
+  pm2 delete monadx-agent > /dev/null 2>&1 || true
+  pm2 start "npx tsx src/index.ts daemon" --name "monadx-agent" > /dev/null 2>&1
+  pm2 save > /dev/null 2>&1
+  echo "🎉 Daemon installed successfully! Your Node is now immortal on the P2P network."
+fi
+
 echo "✅ Installation Complete! MonadX is now integrated into OpenClaw."
 echo ""
 echo "🔥 What to do next:"

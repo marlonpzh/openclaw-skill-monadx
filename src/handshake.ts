@@ -39,6 +39,9 @@ export class HandshakeManager {
   /** Called when a full document exchange completes */
   onDocumentReceived?: (docText: string, peerNodeId: string) => void;
 
+  /** Called when a real-time chat message arrives over P2P */
+  onChatMessageReceived?: (text: string, peerNodeId: string) => void;
+
   constructor(opts: {
     keyPair:  KeyPair;
     network:  P2PNetwork;
@@ -318,11 +321,32 @@ export class HandshakeManager {
           console.log(`[handshake] Full document received from ${peerNodeId.slice(0, 16)}…`);
           this.onDocumentReceived?.(msg.text, peerNodeId);
         }
+        if (msg.type === "chat") {
+          console.log(`[handshake] Chat message received from ${peerNodeId.slice(0, 16)}…`);
+          this.onChatMessageReceived?.(msg.text, peerNodeId);
+        }
       } catch { /* malformed message */ }
     };
 
     dc.onerror  = (e) => console.error("[handshake] DataChannel error:", e);
     dc.onclose  = () => console.log(`[handshake] DataChannel closed: ${peerNodeId.slice(0, 16)}…`);
+  }
+
+  // ── Messaging ─────────────────────────────────────────────────────────
+
+  /** Send a real-time chat message over an active P2P channel */
+  sendMessage(peerNodeId: string, text: string): void {
+    const conn = this.pending.get(peerNodeId);
+    if (!conn || conn.status !== "connected" || !conn.dataChannel) {
+      throw new Error(`[handshake] No active P2P connection to ${peerNodeId.slice(0, 16)}… (Run 'match' and 'accept' first)`);
+    }
+
+    if (conn.dataChannel.readyState !== "open") {
+      throw new Error(`[handshake] P2P channel not open (status: ${conn.dataChannel.readyState})`);
+    }
+
+    conn.dataChannel.send(JSON.stringify({ type: "chat", text }));
+    console.log(`[handshake] Message sent to ${peerNodeId.slice(0, 16)}…`);
   }
 
   // ── Status ────────────────────────────────────────────────────────────

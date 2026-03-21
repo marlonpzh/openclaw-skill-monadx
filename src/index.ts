@@ -38,6 +38,23 @@ const NODE_ROLE = (process.env.monadx_ROLE ?? cfg.role) as "seeker" | "employer"
 const keyPair = loadOrCreateIdentity(DATA_DIR);
 const profile = buildProfile(DATA_DIR, NODE_ROLE, keyPair);
 
+// 🔍 Auto-Configuration: Silent IM Push Binding
+// If an Agent passes its callback URL via MONADX_PUSH_URL env var, we lock it in!
+if (process.env.MONADX_PUSH_URL && process.env.MONADX_PUSH_URL !== cfg.network.push_webhook) {
+  cfg.network.push_webhook = process.env.MONADX_PUSH_URL;
+  try {
+    const fs = await import("fs");
+    fs.writeFileSync(join(DATA_DIR, "config.json"), JSON.stringify(cfg, null, 2));
+    console.log(`[config] 🛡️ IM Push EndPoint 已自动绑定: ${cfg.network.push_webhook}`);
+    
+    // Auto-Restart Daemon if we are in CLI mode to ensure it picks up the change
+    const { exec } = await import("child_process");
+    exec("pm2 restart monadx-agent > /dev/null 2>&1 || true");
+  } catch (err) {
+    // Ignore FS errors in read-only environments
+  }
+}
+
 const network = new P2PNetwork({
   nodeId: keyPair.nodeId,
   dataDir: DATA_DIR,
@@ -72,6 +89,50 @@ handshake.onDocumentReceived = async (docText, peerNodeId) => {
   const result = await imBridge.onDocExchanged(peerNodeId, peerTitle);
   if (result) {
     console.log(`[skill] IM 通道已创建: ${result.im_channel_id}`);
+    
+    // 🔥 Webhook Push: 主动唤醒远端 OpenClaw
+    if (cfg.network.push_webhook) {
+      try {
+        await fetch(cfg.network.push_webhook, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            event: "new_match_received",
+            text: `🔔 [MonadX] 与 ${peerTitle} 完成 P2P 匹配握手！\nNode: ${peerNodeId.slice(0, 16)}…\nIM Channel: ${result.im_channel_id}`,
+            peer_node_id: peerNodeId,
+            peer_title: peerTitle,
+            im_channel_id: result.im_channel_id,
+            timestamp: Date.now()
+          })
+        });
+        console.log(`[webhook] 成功向 ${cfg.network.push_webhook} 发送主动提示机制！`);
+      } catch (err: any) {
+        console.error(`[webhook] 发送失败:`, err.message);
+      }
+    }
+  }
+};
+
+handshake.onChatMessageReceived = async (text, peerNodeId) => {
+  console.log(`[skill] 收到来自 ${peerNodeId.slice(0, 16)}… 的 P2P 消息: ${text}`);
+
+  if (cfg.network.push_webhook) {
+    try {
+      const peerTitle = imBridge.getBinding(peerNodeId)?.peer_title || peerNodeId.slice(0, 16);
+      await fetch(cfg.network.push_webhook, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          event: "p2p_chat_received",
+          text: `💬 [MonadX] ${peerTitle}: ${text}`,
+          peer_node_id: peerNodeId,
+          peer_title: peerTitle,
+          timestamp: Date.now()
+        })
+      });
+    } catch (err: any) {
+      console.error(`[webhook] 消息推送失败:`, err.message);
+    }
   }
 };
 
@@ -90,6 +151,12 @@ scheduler.start();
 
 export async function run(action: SkillAction): Promise<string> {
   switch (action.type) {
+
+    case "send": {
+      const { peer_node_id, text } = action;
+      handshake.sendMessage(peer_node_id, text);
+      return `Message sent to ${peer_node_id.slice(0, 16)}… over encrypted P2P channel.`;
+    }
 
     case "match": {
       const peers = network.loadCachedPeers();
@@ -326,9 +393,30 @@ async function runCLI(args: string[]): Promise<void> {
     case "channels": action = { type: "channels" }; break;
     case "rep": action = { type: "reputation", peer_node_id: rest[0] ? resolveNodeId(rest[0]) : "" }; break;
 
+    case "daemon":
+      console.log("🛡️ MonadX 哨兵模式已启动！将永久挂靠在暗网倾听 P2P 匹配...");
+      setInterval(() => {}, 3600000); // 永久滞留事件循环
+      return; 
+      
+    case "stop":
+      console.log("🛑 正在停止 MonadX 守护进程...");
+      import("child_process").then(({ execSync }) => {
+        try { execSync("pm2 stop monadx-agent >/dev/null 2>&1"); } catch {}
+        console.log("✅ 守护进程已关闭，你现在处于离线隐身状态。");
+      });
+      return;
+
+
     case "deepmatch":
       action = { type: "deep_match", top_n: rest[0] ? parseInt(rest[0]) : undefined };
       break;
+
+    case "send": {
+      const [rawId, ...msgParts] = rest;
+      if (!rawId) { console.error("Usage: send <序号|node_id> <message>"); process.exit(1); }
+      action = { type: "send", peer_node_id: resolveNodeId(rawId), text: msgParts.join(" ") };
+      break;
+    }
 
     case "propose": {
       const [rawId, ...msgParts] = rest;

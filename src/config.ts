@@ -20,6 +20,7 @@ export interface SkillConfig {
     bootstrap_peers:  string[];
     peer_ttl_seconds: number;
     max_cached_peers: number;
+    push_webhook?: string;
   };
 
   broadcast: {
@@ -70,6 +71,7 @@ const DEFAULTS: SkillConfig = {
     ],
     peer_ttl_seconds:  172800, // 48 h
     max_cached_peers:  500,
+    push_webhook:      "",
   },
 
   broadcast: {

@@ -85,4 +85,5 @@ export type SkillAction =
   | { type: "status" }
   | { type: "rate";    peer_node_id: string; score: number }
   | { type: "reputation"; peer_node_id?: string }
-  | { type: "channels" };
+  | { type: "channels" }
+  | { type: "send"; peer_node_id: string; text: string };
