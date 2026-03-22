@@ -37,7 +37,11 @@ The MonadX engine will automatically detect this, save it to `config.json`, and 
 - "看看谁联系过我" / "check proposals" (Agent: Runs `status` to look for incoming invites)
 - "同意 X 的连接" / "accept N" (Agent: Runs `accept <id>`. This creates a permanent IM Bridge!)
 - "查看已经建立沟通的列表" / "show channels" (Agent: Runs `channels` to show successful IM Bridge binds)
-- "我要下线" / "go offline" (Agent: Runs `stop` to gracefully shut down the background PM2 daemon, making the user invisible on the network)
+- "我要下线" / "关闭常驻进程" / "关闭monadx" / "停止daemon" / "go offline" / "stop daemon":
+  **⚠️ CRITICAL: You MUST run `pm2 stop monadx-agent` to stop the daemon. NEVER use `kill`, `kill -9`, `pkill`, or any PID-based process killing method!** PM2 is a process supervisor — if you kill the PID directly, PM2 will immediately auto-restart it and the daemon will stay online. The ONLY correct ways to stop are:
+    1. `pm2 stop monadx-agent` (preferred, instant)
+    2. `npx tsx src/index.ts stop` (invokes pm2 stop internally)
+  After stopping, verify with `pm2 status monadx-agent` — the status column MUST show `stopped`, NOT `online`.
 
 ## Capabilities
 
