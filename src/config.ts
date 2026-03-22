@@ -131,7 +131,10 @@ export function loadConfig(dataDir?: string): SkillConfig {
     if (existsSync(path)) {
       try {
         const raw  = JSON.parse(readFileSync(path, "utf8"));
-        _cached    = deepMerge(DEFAULTS, raw) as SkillConfig;
+        const merged = deepMerge(DEFAULTS, raw) as SkillConfig & Record<string, unknown>;
+        // Strip non-schema keys like _comment from user config
+        delete merged._comment;
+        _cached = merged;
         console.log(`[config] Loaded from ${path}`);
         return _cached;
       } catch (e) {

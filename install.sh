@@ -14,6 +14,13 @@ if [ -d "$SKILL_DIR" ]; then
   echo "📦 MonadX is already installed. Updating to latest version..."
   cd "$SKILL_DIR"
   git pull origin main
+  # Ensure scripts are executable after pull
+  chmod +x scripts/*.sh 2>/dev/null || true
+  # Restart running daemon to pick up new code
+  if command -v pm2 >/dev/null 2>&1 && pm2 describe monadx-agent >/dev/null 2>&1; then
+    echo "🔄 Restarting monadx-agent to apply updates..."
+    pm2 restart monadx-agent > /dev/null 2>&1 || true
+  fi
 else
   echo "📥 Cloning MonadX repository..."
   mkdir -p "$BASE_DIR"

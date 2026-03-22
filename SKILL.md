@@ -3,6 +3,37 @@
 A fully decentralized peer-to-peer data matching and social skill for OpenClaw agents.
 No central servers. No accounts. Pure cryptographic P2P.
 
+## ⛔ Process Control (HIGHEST PRIORITY — Read First)
+
+When the user wants to stop/start MonadX, you MUST use the dedicated scripts below.
+**DO NOT improvise your own commands. DO NOT use `kill`. DO NOT touch any other service.**
+
+### STOP MonadX (下线/关闭/offline)
+
+Trigger: "我要下线" / "关闭常驻进程" / "关闭monadx" / "go offline" / "停止招聘" / "关闭P2P" / "停止daemon" / "stop daemon" / any request to stop or close MonadX
+
+Run EXACTLY this command and NOTHING else:
+```
+bash ~/.openclaw/skills/monadx/scripts/stop.sh
+```
+
+### START MonadX (上线/启动/online)
+
+Trigger: "上线" / "启动monadx" / "重新上线" / "go online" / any request to start or restart MonadX
+
+Run EXACTLY this command and NOTHING else:
+```
+bash ~/.openclaw/skills/monadx/scripts/start.sh
+```
+
+### FORBIDDEN — Never do these:
+
+- ❌ `kill`, `kill -9`, `pkill`, `killall` — PM2 will auto-restart, process stays online
+- ❌ Stopping `openclaw-gateway` or any other PM2/system process — this skill ONLY controls `monadx-agent`
+- ❌ Inventing your own stop/start commands — always use the scripts above
+
+---
+
 ## Autonomous Conversational Deployment (ACD)
 
 To provide a zero-configuration experience for users via the OpenClaw IM channel, you (the OpenClaw Agent) MUST handle their onboarding seamlessly without asking them to type terminal commands. 
@@ -37,11 +68,6 @@ The MonadX engine will automatically detect this, save it to `config.json`, and 
 - "看看谁联系过我" / "check proposals" (Agent: Runs `status` to look for incoming invites)
 - "同意 X 的连接" / "accept N" (Agent: Runs `accept <id>`. This creates a permanent IM Bridge!)
 - "查看已经建立沟通的列表" / "show channels" (Agent: Runs `channels` to show successful IM Bridge binds)
-- "我要下线" / "关闭常驻进程" / "关闭monadx" / "停止daemon" / "go offline" / "stop daemon":
-  **⚠️ CRITICAL: You MUST run `pm2 stop monadx-agent` to stop the daemon. NEVER use `kill`, `kill -9`, `pkill`, or any PID-based process killing method!** PM2 is a process supervisor — if you kill the PID directly, PM2 will immediately auto-restart it and the daemon will stay online. The ONLY correct ways to stop are:
-    1. `pm2 stop monadx-agent` (preferred, instant)
-    2. `npx tsx src/index.ts stop` (invokes pm2 stop internally)
-  After stopping, verify with `pm2 status monadx-agent` — the status column MUST show `stopped`, NOT `online`.
 
 ## Capabilities
 
@@ -58,6 +84,8 @@ The MonadX engine will automatically detect this, save it to `config.json`, and 
 - `src/match-index.ts` — Inverted Index for infinite scaling local filtering
 - `src/scheduler.ts`   — Smart TTL background broadcast loop
 - `src/index.ts`       — OpenClaw agent entry point & standalone CLI
+- `scripts/stop.sh`    — Dedicated stop script (MUST use for stopping)
+- `scripts/start.sh`   — Dedicated start script (MUST use for starting)
 
 ## Data stored locally
 
