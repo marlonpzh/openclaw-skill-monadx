@@ -182,42 +182,20 @@ function sha256(text: string): string {
 
 // ── Templates ─────────────────────────────────────────────────────────────────
 
-const RESUME_TEMPLATE = `# Your Name — Software Engineer
-
-## Summary
-Experienced engineer with a focus on TypeScript, Node.js, and distributed systems.
-Location: remote
-Salary: 20-40k
+const RESUME_TEMPLATE = `# (请通过 IM 频道告诉 Agent 你的求职信息，此文件将被自动覆盖)
 
 ## Skills
-TypeScript, Node.js, React, PostgreSQL, Docker, remote
+(待填写)
 
-## Experience
-
-### Senior Engineer @ Acme Corp (2022–present)
-- Built P2P data pipelines processing 1M events/day
-- Led migration from monolith to microservices
-
-## Education
-BSc Computer Science, University of Example, 2019
+## Summary
+(待填写)
 `;
 
-const JD_TEMPLATE = `# Senior TypeScript Engineer — Acme Corp
-
-## About the Role
-We are looking for a senior engineer to join our distributed systems team.
-Location: remote
-Salary: 25-45k
+const JD_TEMPLATE = `# (请通过 IM 频道告诉 Agent 你的招聘信息，此文件将被自动覆盖)
 
 ## Requirements
-- 3+ years TypeScript / Node.js
-- Experience with distributed systems or P2P networks
-- Familiarity with Docker and Kubernetes
+(待填写)
 
-## Nice to have
-- Open source contributions
-- Experience with WebRTC or Gun.js
-
-## About Us
-Acme Corp builds developer tools. We are fully remote, async-first.
+## About the Role
+(待填写)
 `;

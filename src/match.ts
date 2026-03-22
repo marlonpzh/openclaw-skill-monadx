@@ -29,18 +29,16 @@ export function localMatch(
   const ourDoc = readFileSync(ourProfile.doc_path, "utf8").toLowerCase();
   const ourSkillSet = new Set(ourProfile.skills.map((s) => s.toLowerCase()));
 
-  // ── 倒排索引：提前剪枝 (Bloom-like behaviour) ──────────────────────────
-  // 重建索引映射 (O(N) 构建, N = peers 数量)
-  const index = new PeerIndex();
-  index.rebuild(peers);
-  
-  // 查找：只取出与我们有 >= 1 个共同技能的候选节点 (O(K), K 远小于 N)
-  // 若无一个技能匹配，即使工资/位置完全重叠也没意义
-  const candidates = index.getCandidates(ourSkillSet);
+  // ── TEMP: 测试模式 — 跳过技能过滤，seeker/employer 互相匹配即可 ──────
+  // 正式上线后恢复倒排索引过滤（取消下方注释，删除 role-based fallback）
+  // const index = new PeerIndex();
+  // index.rebuild(peers);
+  // const candidates = index.getCandidates(ourSkillSet);
 
-  if (candidates.length === 0 && peers.length > 0) {
-    console.log(`[match] 共有 ${peers.length} 个节点，但无包含相同技能的求职/招聘者。`);
-  }
+  // Role-based matching: seeker sees employers, employer sees seekers
+  const oppositeRole = ourProfile.role === "seeker" ? "employer" : "seeker";
+  const candidates = peers.filter((p) => p.role === oppositeRole || p.role !== ourProfile.role);
+  // TEMP END ─────────────────────────────────────────────────────────────
 
   // ── 以下仅对极少数高阶候选人进行重度多维打分 ────────────────────────────
   const scored: PeerProfile[] = candidates.map((peer) => {
@@ -56,7 +54,7 @@ export function localMatch(
   scored.sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
 
   return {
-    peers:    scored.filter((p) => (p.score ?? 0) > 0),
+    peers:    scored, // TEMP: 测试期间不过滤低分，正式上线恢复 .filter((p) => (p.score ?? 0) > 0)
     run_at:   Date.now(),
     doc_used: ourProfile.doc_path,
   };

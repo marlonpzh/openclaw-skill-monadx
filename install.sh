@@ -40,11 +40,11 @@ if [ ! -f "$MONADX_DATA_DIR/config.json" ]; then
 fi
 
 if [ ! -f "$MONADX_DATA_DIR/resume.md" ]; then
-  echo -e "# 张三 — 寻求全栈开发岗位\n\nSkills: Node.js, React, TypeScript\nLocation: Remote\nSalary: 20-30k\n\n(Edit this file to build your precise seeker profile!)" > "$MONADX_DATA_DIR/resume.md"
+  echo -e "# (请通过 IM 频道告诉 Agent 你的求职信息)\n\n## Skills\n(待填写)\n" > "$MONADX_DATA_DIR/resume.md"
 fi
 
 if [ ! -f "$MONADX_DATA_DIR/jd.md" ]; then
-  echo -e "# 招聘：高级算法工程师\n\nSkills: PyTorch, AI, C++\nLocation: Beijing\nSalary: 30-50k\n\n(Edit this file to build your precisely targeted employer JD!)" > "$MONADX_DATA_DIR/jd.md"
+  echo -e "# (请通过 IM 频道告诉 Agent 你的招聘信息)\n\n## Requirements\n(待填写)\n" > "$MONADX_DATA_DIR/jd.md"
 fi
 
 echo "🛡️ Installing System Daemon (PM2) to keep MonadX online 24/7..."
