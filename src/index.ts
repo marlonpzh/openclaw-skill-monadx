@@ -397,7 +397,10 @@ async function runCLI(args: string[]): Promise<void> {
 
     case "daemon":
       console.log("🛡️ MonadX 哨兵模式已启动！将永久挂靠在暗网倾听 P2P 匹配...");
-      setInterval(() => {}, 3600000); // 永久滞留事件循环
+      // 每 30 秒主动轮询一次意向信号，防止 Gun.js 事件流断开导致漏接
+      setInterval(() => {
+        network.pollIntents();
+      }, 30000);
       return; 
       
     case "stop":
