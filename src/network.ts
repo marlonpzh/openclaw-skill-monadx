@@ -18,31 +18,31 @@ import { validatePeerProfile } from "./profile.js";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyGun = any;
 
-export type PeerHandler   = (peer: BroadcastProfile) => void;
-export type IntentHandler = (signal: IntentSignal)   => void;
-export type SignalHandler = (msg: SignalMessage)      => void;
+export type PeerHandler = (peer: BroadcastProfile) => void;
+export type IntentHandler = (signal: IntentSignal) => void;
+export type SignalHandler = (msg: SignalMessage) => void;
 
 const DEFAULT_PEERS = [
   "https://gun-manhattan.herokuapp.com/gun",
   "https://gun-us.herokuapp.com/gun",
 ];
 
-const NS_PROFILES = "monadx_v1_profiles";   // 不用斜线，避免 Gun 路径歧义
-const NS_INTENTS  = "monadx_v1_intents";
-const NS_SIGNALS  = "monadx_v1_signals";
+const NS_PROFILES = "monadx_v2_profiles";   // 不用斜线，避免 Gun 路径歧义
+const NS_INTENTS = "monadx_v2_intents";
+const NS_SIGNALS = "monadx_v2_signals";
 
 // ── Gun 序列化层 ──────────────────────────────────────────────────────────
 // Gun 不支持数组 → 把 skills / salary_range 存为 JSON 字符串
 
 type GunProfile = Omit<BroadcastProfile, "skills" | "salary_range"> & {
-  skills:       string;   // JSON.stringify(string[])
+  skills: string;   // JSON.stringify(string[])
   salary_range: string;   // JSON.stringify([number,number])
 };
 
-function flattenForGun(p: BroadcastProfile): GunProfile {
+export function flattenForGun(p: BroadcastProfile): Record<string, unknown> {
   return {
     ...p,
-    skills:       JSON.stringify(p.skills),
+    skills: JSON.stringify(p.skills),
     salary_range: JSON.stringify(p.salary_range),
   };
 }
@@ -53,17 +53,17 @@ function unflattenFromGun(raw: Record<string, unknown>): BroadcastProfile {
   const g = clean as GunProfile;
   return {
     ...g,
-    skills:       safeParseArray<string>(g.skills,       []),
+    skills: safeParseArray<string>(g.skills, []),
     salary_range: safeParseArray<number>(g.salary_range, [0, 999]) as [number, number],
   };
 }
 
-function safeParseArray<T>(s: unknown, fallback: T[]): T[] {
-  if (Array.isArray(s)) return s as T[];
-  if (typeof s !== "string") return fallback;
+function safeParseArray<T>(val: unknown, fallback: T[]): T[] {
+  if (typeof val !== "string") return fallback;
   try {
-    const v = JSON.parse(s);
-    return Array.isArray(v) ? v : fallback;
+    const parsed = JSON.parse(val);
+    if (!Array.isArray(parsed)) return fallback;
+    return parsed;
   } catch {
     return fallback;
   }
@@ -72,12 +72,12 @@ function safeParseArray<T>(s: unknown, fallback: T[]): T[] {
 // ── P2PNetwork ────────────────────────────────────────────────────────────
 
 export class P2PNetwork {
-  private gun:        AnyGun;
-  private nodeId:     string;
-  private dataDir:    string;
+  private gun: AnyGun;
+  private nodeId: string;
+  private dataDir: string;
   private ttlSeconds: number;
 
-  private peerHandlers:   PeerHandler[]   = [];
+  private peerHandlers: PeerHandler[] = [];
   private intentHandlers: IntentHandler[] = [];
   private signalHandlers: SignalHandler[] = [];
 
@@ -86,18 +86,18 @@ export class P2PNetwork {
   private seenIntentKeys = new Set<string>();
 
   constructor(opts: { nodeId: string; dataDir: string; peers?: string[]; ttlSeconds?: number }) {
-    this.nodeId     = opts.nodeId;
-    this.dataDir    = opts.dataDir;
+    this.nodeId = opts.nodeId;
+    this.dataDir = opts.dataDir;
     this.ttlSeconds = opts.ttlSeconds ?? 86400; // defaults to 24h
 
-    const peers    = opts.peers ?? DEFAULT_PEERS;
+    const peers = opts.peers ?? DEFAULT_PEERS;
     const hasPeers = peers.length > 0;
 
     this.gun = Gun({
       peers,
       // 有外部 peer 时必须开启 radisk，Gun relay 同步依赖磁盘存储
-      file:         hasPeers ? join(opts.dataDir, "radata") : undefined,
-      radisk:       !hasPeers,
+      file: hasPeers ? join(opts.dataDir, "radata") : undefined,
+      radisk: !hasPeers,
       localStorage: false,
     });
 
@@ -113,7 +113,7 @@ export class P2PNetwork {
       .get(profile.node_id)
       .put(flat, (ack: { err?: string }) => {
         if (ack?.err) console.error("[network] 广播失败:", ack.err);
-        else          console.log("[network] 广播成功:", profile.title);
+        else console.log("[network] 广播成功:", profile.title);
       });
   }
 
@@ -123,17 +123,17 @@ export class P2PNetwork {
     this.gun.get(NS_PROFILES).map().on((data: unknown) => {
       if (!data || typeof data !== "object") return;
 
-      const raw     = data as Record<string, unknown>;
+      const raw = data as Record<string, unknown>;
       const profile = unflattenFromGun(raw);     // 剥离 _ 并还原数组字段
 
-      if (!profile.node_id)                         return;
-      if (profile.node_id === this.nodeId)          return;
+      if (!profile.node_id) return;
+      if (profile.node_id === this.nodeId) return;
 
       const seenKey = `${profile.node_id}:${profile.timestamp}`;
-      if (this.seenPeers.has(seenKey))              return;
+      if (this.seenPeers.has(seenKey)) return;
 
       const age = Date.now() / 1000 - (profile.timestamp ?? 0);
-      if (age > this.ttlSeconds || age < -300)      return;
+      if (age > this.ttlSeconds || age < -300) return;
 
       if (!validatePeerProfile(profile)) {
         console.warn("[network] 签名验证失败:", profile.node_id.slice(0, 16));
@@ -211,7 +211,7 @@ export class P2PNetwork {
 
   // ── 注册回调 ─────────────────────────────────────────────────────────────
 
-  onPeer(h: PeerHandler):     void { this.peerHandlers.push(h); }
+  onPeer(h: PeerHandler): void { this.peerHandlers.push(h); }
   onIntent(h: IntentHandler): void { this.intentHandlers.push(h); }
   onSignal(h: SignalHandler): void { this.signalHandlers.push(h); }
 
