@@ -4,7 +4,7 @@ set -e
 echo "🚀 Installing MonadX Engine into your OpenClaw..."
 
 # Allow users to override the base skills directory via the DEST_DIR environment variable
-BASE_DIR="${DEST_DIR:-$HOME/.openclaw/skills}"
+BASE_DIR="${DEST_DIR:-$HOME/.openclaw/workspace/skills}"
 SKILL_DIR="$BASE_DIR/monadx"
 
 echo "📂 Target installation directory: $SKILL_DIR"
