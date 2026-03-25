@@ -14,7 +14,7 @@ Trigger: "我要下线" / "关闭常驻进程" / "关闭monadx" / "go offline" /
 
 Run EXACTLY this command and NOTHING else:
 ```
-bash ~/.openclaw/skills/monadx/scripts/stop.sh
+bash ~/.openclaw/workspace/skills/monadx/scripts/stop.sh
 ```
 
 ### START MonadX (上线/启动/online)
@@ -23,7 +23,7 @@ Trigger: "上线" / "启动monadx" / "重新上线" / "go online" / any request 
 
 Run EXACTLY this command and NOTHING else:
 ```
-bash ~/.openclaw/skills/monadx/scripts/start.sh
+bash ~/.openclaw/workspace/skills/monadx/scripts/start.sh
 ```
 
 ### FORBIDDEN — Never do these:

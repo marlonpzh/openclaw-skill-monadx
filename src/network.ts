@@ -132,11 +132,16 @@ export class P2PNetwork {
       const seenKey = `${profile.node_id}:${profile.timestamp}`;
       if (this.seenPeers.has(seenKey)) return;
 
+      console.log(`[network] Received raw profile payload via Gun: node_id=${profile.node_id.slice(0,16)} from remote`);
+
       const age = Date.now() / 1000 - (profile.timestamp ?? 0);
-      if (age > this.ttlSeconds || age < -300) return;
+      if (age > this.ttlSeconds || age < -86400) {
+        console.warn(`[network] 丢弃时间异常的节点: node=${profile.node_id?.slice(0, 16)} age=${age}s`);
+        return;
+      }
 
       if (!validatePeerProfile(profile)) {
-        console.warn("[network] 签名验证失败:", profile.node_id.slice(0, 16));
+        console.warn(`[network] 签名/有效期验证失败: node=${profile.node_id.slice(0, 16)} title="${profile.title}" role=${profile.role}`);
         return;
       }
 

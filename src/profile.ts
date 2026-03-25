@@ -139,9 +139,13 @@ export function validatePeerProfile(profile: BroadcastProfile): boolean {
 
   const age = Date.now() / 1000 - profile.timestamp;
   if (age > PROFILE_TTL_SECONDS * 2) return false;
-  if (age < -300) return false;
+  if (age < -86400) return false;
 
-  return verify(flattenForSign(rest as Record<string, unknown>), sig, profile.node_id);
+  const verified = verify(flattenForSign(rest as Record<string, unknown>), sig, profile.node_id);
+  if (!verified) {
+    console.error(`[network] 签名严重不匹配!\nReceived: ${JSON.stringify(rest)}\nFlattened: ${JSON.stringify(flattenForSign(rest as Record<string, unknown>))}`);
+  }
+  return verified;
 }
 
 // ── Extraction helpers ────────────────────────────────────────────────────────
