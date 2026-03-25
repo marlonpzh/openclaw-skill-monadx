@@ -37,7 +37,7 @@ export class BroadcastScheduler {
   /** 开始智能调度循环 */
   start(): void {
     if (this.timer) return;
-    this.scheduleNext(0); // 立即广播一次
+    this.scheduleNext(3000); // Wait 3s for Gun.js WebSockets to stabilize before first broadcast
   }
 
   /** 停止调度循环 */
