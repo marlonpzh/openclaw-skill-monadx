@@ -95,9 +95,9 @@ export class P2PNetwork {
 
     this.gun = Gun({
       peers,
-      // 有外部 peer 时必须开启 radisk，Gun relay 同步依赖磁盘存储
-      file: hasPeers ? join(opts.dataDir, "radata") : undefined,
-      radisk: !hasPeers,
+      // 必须始终开启 radisk，否则在初始建立 ws 连接时同步会丢失或挂起
+      file: join(opts.dataDir, "radata"),
+      radisk: true,
       localStorage: false,
     });
 
@@ -108,6 +108,7 @@ export class P2PNetwork {
 
   broadcast(profile: BroadcastProfile): void {
     const flat = flattenForGun(profile);
+    console.log("[network] Initiating put() to relay for:", flat);
     this.gun
       .get(NS_PROFILES)
       .get(profile.node_id)
