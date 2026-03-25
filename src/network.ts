@@ -108,14 +108,22 @@ export class P2PNetwork {
 
   broadcast(profile: BroadcastProfile): void {
     const flat = flattenForGun(profile);
-    console.log("[network] Initiating put() to relay for:", flat);
-    this.gun
-      .get(NS_PROFILES)
-      .get(profile.node_id)
-      .put(flat, (ack: { err?: string }) => {
-        if (ack?.err) console.error("[network] 广播失败:", ack.err);
-        else console.log("[network] 广播成功:", profile.title);
-      });
+    console.log("[network] Initiating put() + set() to relay for:", flat);
+    
+    // 强制每次生成独一无二的随机/时间 key，避免被 CRDT 时钟引擎吃掉状态更新
+    const uniqueKey = `${profile.node_id}_${profile.timestamp}`;
+    const nodeRef = this.gun.get(uniqueKey);
+    
+    nodeRef.put(flat, (ack: { err?: string }) => {
+      if (ack?.err) console.error("[network] 节点数据保存失败:", ack.err);
+      else {
+        // 利用 Gun 的 Set 图边链接机制，安全并入发现花名册
+        this.gun.get(NS_PROFILES).set(nodeRef, (setAck: { err?: string }) => {
+           if (setAck?.err) console.error("[network] set() 索引失败:", setAck.err);
+           else console.log("[network] 广播成功，数据和索引已合并:", profile.title);
+        });
+      }
+    });
   }
 
   // ── 发现 ─────────────────────────────────────────────────────────────────
