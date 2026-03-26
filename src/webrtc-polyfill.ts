@@ -6,7 +6,7 @@
 // ─────────────────────────────────────────────
 
 import { createRequire } from "module";
-const require = require = createRequire(import.meta.url);
+const require = createRequire(import.meta.url);
 
 type RTCSdpType = "offer" | "answer" | "pranswer" | "rollback";
 
