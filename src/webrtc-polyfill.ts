@@ -100,7 +100,7 @@ class NodeRTCPeerConnection {
 
   async setLocalDescription(desc: RTCSessionDescriptionInit): Promise<void> {
     if (desc.sdp) {
-      this.pc.setLocalDescription(desc.sdp);
+      this.pc.setLocalDescription(desc.sdp, desc.type);
     }
   }
 
