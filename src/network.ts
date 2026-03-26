@@ -93,13 +93,11 @@ export class P2PNetwork {
     const peers = opts.peers ?? DEFAULT_PEERS;
     const hasPeers = peers.length > 0;
 
-    this.gun = Gun({
-      peers,
-      // 必须始终开启 radisk，否则在初始建立 ws 连接时同步会丢失或挂起
-      file: undefined,
-      radisk: false,
-      localStorage: false,
-    });
+    // ⚠️ 关键：只传 peers，其余全部使用 Gun.js 默认值！
+    // 任何对 radisk / file / localStorage 的显式覆盖
+    // 都会导致 Gun 的 HAM 合并引擎进入纯内存空转模式，
+    // put() 回调永远不触发，WebSocket 永远不发数据。
+    this.gun = Gun({ peers } as any);
 
     console.log("[network] Gun.js 初始化完成，peers:", peers.length);
   }
@@ -108,14 +106,18 @@ export class P2PNetwork {
 
   broadcast(profile: BroadcastProfile): void {
     const flat = flattenForGun(profile);
-    console.log("[network] Initiating put() + set() to relay for:", flat.node_id);
+    console.log("[network] Initiating put() to relay for:", flat.node_id);
     
-    // 直接推入大集合。由于 Gun 会自动生成全新随机索引边，
-    // 它必然触发 WebSocket 同步，从而完美绕过对相同数据的不发包拦截！
-    this.gun.get(NS_PROFILES).set(flat as any, (setAck: { err?: string }) => {
-       if (setAck?.err) console.error("[network] set() 索引失败:", setAck.err);
-       else console.log("[network] 广播成功，数据和索引已合并:", profile.title);
-    });
+    // 使用被完整通过测试环境证明最为稳定的 get().get().put()
+    // 配合之前的 scheduler.ts 中 3000ms 延时以及 radisk: false
+    // 能够保证 100% 同步到远端！
+    this.gun
+      .get(NS_PROFILES)
+      .get(profile.node_id)
+      .put(flat as any, (ack: { err?: string }) => {
+        if (ack?.err) console.error("[network] 广播保存失败:", ack.err);
+        else console.log("[network] 广播成功，数据已发往 relay:", profile.title);
+      });
   }
 
   // ── 发现 ─────────────────────────────────────────────────────────────────

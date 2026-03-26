@@ -24,7 +24,7 @@ import { BroadcastScheduler } from "./scheduler.js";
 
 // ── Boot ──────────────────────────────────────────────────────────────────
 
-installWebRTCPolyfill();
+// We will initialize polyfill after Gun.js boots to prevent Gun from hijacking it.
 
 const DATA_DIR = join(homedir(), ".monadx");
 
@@ -63,6 +63,9 @@ const network = new P2PNetwork({
   peers: cfg.network.bootstrap_peers,
   ttlSeconds: cfg.network.peer_ttl_seconds,
 });
+
+// Install polyfill *after* Gun.js has safely bound to pure WebSockets.
+installWebRTCPolyfill();
 
 const reputation = new ReputationStore(DATA_DIR, network);
 
