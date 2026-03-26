@@ -245,7 +245,7 @@ export class HandshakeManager {
       if (conn) conn.rtcConn = rtcConn;
 
       // Wire ondatachannel (answerer side)
-      rtcConn.ondatachannel = (ev) => {
+      rtcConn.ondatachannel = (ev: any) => {
         const dc = ev.channel;
         if (conn) conn.dataChannel = dc;
         this.wireDataChannel(dc, msg.from_node_id);
@@ -300,7 +300,7 @@ export class HandshakeManager {
     });
 
     // Relay ICE candidates through Gun
-    rtcConn.onicecandidate = (ev) => {
+    rtcConn.onicecandidate = (ev: any) => {
       if (!ev.candidate) return;
       const now  = Math.floor(Date.now() / 1000);
       const base = {
@@ -337,7 +337,7 @@ export class HandshakeManager {
       }
     };
 
-    dc.onmessage = (ev) => {
+    dc.onmessage = (ev: any) => {
       try {
         const msg = JSON.parse(ev.data as string) as { type: string; text: string };
         if (msg.type === "doc") {
@@ -351,7 +351,7 @@ export class HandshakeManager {
       } catch { /* malformed message */ }
     };
 
-    dc.onerror  = (e) => console.error("[handshake] DataChannel error:", e);
+    dc.onerror  = (e: any) => console.error("[handshake] DataChannel error:", e);
     dc.onclose  = () => console.log(`[handshake] DataChannel closed: ${peerNodeId.slice(0, 16)}…`);
   }
 
