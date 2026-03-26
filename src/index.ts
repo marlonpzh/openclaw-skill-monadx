@@ -79,6 +79,7 @@ const handshake = new HandshakeManager({
   keyPair,
   network,
   docPath: profile.doc_path,
+  webRTCEnabled: isDaemon, // 🛠️ Fix: CLI tools (match/propose/etc) skip WebRTC engine to avoid crashes
 });
 
 // Full documents received after DataChannel opens (keyed by peer node_id).

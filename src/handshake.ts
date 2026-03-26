@@ -36,6 +36,7 @@ export class HandshakeManager {
   private docPath:  string;
   private pending:     Map<string, PendingConnection> = new Map();
   private seenIntents: Set<string> = new Set();  // intent 去重
+  private webRTCEnabled: boolean;
 
   /** Called when a full document exchange completes */
   onDocumentReceived?: (docText: string, peerNodeId: string) => void;
@@ -44,14 +45,15 @@ export class HandshakeManager {
   onChatMessageReceived?: (text: string, peerNodeId: string) => void;
 
   constructor(opts: {
-    keyPair:  KeyPair;
-    network:  P2PNetwork;
-    docPath:  string;
+    keyPair:       KeyPair;
+    network:       P2PNetwork;
+    docPath:       string;
+    webRTCEnabled: boolean;
   }) {
-    installWebRTCPolyfill();
     this.keyPair = opts.keyPair;
     this.network = opts.network;
     this.docPath = opts.docPath;
+    this.webRTCEnabled = opts.webRTCEnabled;
 
     // Wire up incoming message handlers
     this.network.onIntent((signal) => this.handleIncomingIntent(signal));
@@ -181,12 +183,12 @@ export class HandshakeManager {
       if (!conn) return;
       conn.status = "accepted";
       
-      // 🛡️ Guard against missing WebRTC polyfill in some environments
-      if (typeof RTCPeerConnection !== "undefined") {
+      // 🛡️ Guard: Only initiate WebRTC if the node is capable (e.g. Daemon)
+      if (this.webRTCEnabled && typeof RTCPeerConnection !== "undefined") {
         console.log("[handshake] Peer accepted — initiating WebRTC offer…");
         this.initiateWebRTC(signal.from_node_id);
       } else {
-        console.log("[handshake] Peer accepted, but WebRTC is unavailable on this node. Use the background daemon for direct P2P connection.");
+        console.log("[handshake] WebRTC will be managed by the background daemon.");
       }
     }
 
@@ -234,9 +236,9 @@ export class HandshakeManager {
     const conn = this.pending.get(msg.from_node_id);
 
     if (msg.type === "offer") {
-      // 🛡️ Guard against missing WebRTC polyfill
-      if (typeof RTCPeerConnection === "undefined") {
-        console.warn("[handshake] WebRTC offer received, but WebRTC is unavailable on this node.");
+      // 🛡️ Guard: Only handle WebRTC if the node is capable
+      if (!this.webRTCEnabled || typeof RTCPeerConnection === "undefined") {
+        console.warn("[handshake] WebRTC offer received, but this process is CLI-only. Daemon will handle it.");
         return;
       }
 
