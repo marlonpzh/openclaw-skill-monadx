@@ -57,11 +57,16 @@ if (process.env.MONADX_PUSH_URL && process.env.MONADX_PUSH_URL !== cfg.network.p
   }
 }
 
+const isCLI = process.argv[1]?.endsWith("index.ts") || process.argv[1]?.endsWith("index.js");
+const cliCmd = isCLI ? (process.argv[2] ?? "help") : "none";
+const isDaemon = cliCmd === "daemon" || !isCLI;
+
 const network = new P2PNetwork({
   nodeId: keyPair.nodeId,
   dataDir: DATA_DIR,
   peers: cfg.network.bootstrap_peers,
   ttlSeconds: cfg.network.peer_ttl_seconds,
+  radisk: isDaemon, // 🛠️ Fix: CLI tools (match/propose/etc) bypass file locking
 });
 
 // Install polyfill *after* Gun.js has safely bound to pure WebSockets.
@@ -364,14 +369,10 @@ function resolveNodeId(input: string): string {
   process.exit(1);
 }
 
-// ── Standalone CLI ────────────────────────────────────────────────────────
-
-const isCLI =
-  process.argv[1]?.endsWith("index.ts") ||
-  process.argv[1]?.endsWith("index.js");
-
+// 🔀 Standalone CLI Entry Point
 if (isCLI) {
-  await runCLI(process.argv.slice(2));
+  const args = process.argv.slice(2);
+  await runCLI(args);
 }
 
 async function runCLI(args: string[]): Promise<void> {
@@ -463,6 +464,12 @@ async function runCLI(args: string[]): Promise<void> {
 
   const result = await run(action);
   console.log("\n" + result + "\n");
+
+  // Give Gun.js a moment to push the networking packets out before the process exits
+  const WRITE_CMDS = new Set(["propose", "accept", "decline", "send", "rate", "broadcast"]);
+  if (WRITE_CMDS.has(cmd)) {
+    await new Promise((r) => setTimeout(r, 2000));
+  }
 
   process.exit(0);
 }

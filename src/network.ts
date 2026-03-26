@@ -85,7 +85,7 @@ export class P2PNetwork {
   private seenPeers = new Set<string>();
   private seenIntentKeys = new Set<string>();
 
-  constructor(opts: { nodeId: string; dataDir: string; peers?: string[]; ttlSeconds?: number }) {
+  constructor(opts: { nodeId: string; dataDir: string; peers?: string[]; ttlSeconds?: number; radisk?: boolean }) {
     this.nodeId = opts.nodeId;
     this.dataDir = opts.dataDir;
     this.ttlSeconds = opts.ttlSeconds ?? 86400; // defaults to 24h
@@ -93,13 +93,20 @@ export class P2PNetwork {
     const peers = opts.peers ?? DEFAULT_PEERS;
     const hasPeers = peers.length > 0;
 
-    // ⚠️ 关键：只传 peers，其余全部使用 Gun.js 默认值！
-    // 任何对 radisk / file / localStorage 的显式覆盖
-    // 都会导致 Gun 的 HAM 合并引擎进入纯内存空转模式，
-    // put() 回调永远不触发，WebSocket 永远不发数据。
-    this.gun = Gun({ peers } as any);
+    // 🌐 Gun initialization: Only pass peers and optional radisk overrides.
+    // Specifying radisk: false is crucial for CLI tools to avoid 
+    // file locking conflicts with the persistent background daemon.
+    const gunOpts: any = { peers };
+    if (opts.radisk === false) {
+      gunOpts.radisk = false;
+      gunOpts.localStorage = false;
+      // We don't want the CLI tool to create its own radata folder
+      gunOpts.file = false;
+    }
 
-    console.log("[network] Gun.js 初始化完成，peers:", peers.length);
+    this.gun = Gun(gunOpts);
+
+    console.log("[network] Gun.js 实例已初始化 | radisk:", opts.radisk !== false, "| peers:", peers.length);
   }
 
   // ── 广播 ─────────────────────────────────────────────────────────────────
