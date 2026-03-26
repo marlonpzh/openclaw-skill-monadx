@@ -11,13 +11,16 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+import { createRequire } from "module";
+const require = createRequire(import.meta.url);
+
 type IceServer = { urls: string | string[] };
 
 interface RTCConfig {
   iceServers?: IceServer[];
 }
 
-// ── Minimal type stubs (the real types come from lib.dom.d.ts in browsers) ──
+// ── Minimal type stubs ──
 
 type RTCSdpType = "offer" | "answer" | "pranswer" | "rollback";
 
@@ -46,15 +49,12 @@ class NodeRTCPeerConnection {
   get connectionState(): string { return this._connectionState; }
 
   constructor(config: RTCConfig = {}) {
-    // Lazy require — avoids crashing when native binary isn't built
+    // Lazy load binary
     let nodedc: any;
     try {
       nodedc = require("node-datachannel");
-    } catch {
-      throw new Error(
-        "[webrtc-polyfill] node-datachannel not available. " +
-        "Install it with: npm install node-datachannel"
-      );
+    } catch (e: any) {
+      throw new Error(`[webrtc-polyfill] node-datachannel loader failed: ${e.message}`);
     }
 
     const iceUrls = (config.iceServers ?? [])
@@ -76,58 +76,45 @@ class NodeRTCPeerConnection {
     });
 
     this.pc.onDataChannel((dc: any) => {
-      const wrapped = new NodeRTCDataChannel(dc);
-      this.channels.set(dc.getLabel(), wrapped);
-      this.ondatachannel?.({ channel: wrapped });
+      const label = dc.getLabel();
+      const nodeDC = new NodeRTCDataChannel(dc);
+      this.channels.set(label, nodeDC);
+      this.ondatachannel?.({ channel: nodeDC });
     });
   }
 
-  createDataChannel(label: string, _opts?: { ordered?: boolean }): NodeRTCDataChannel {
-    let nodedc: any;
-    try { nodedc = require("node-datachannel"); } catch { throw new Error("node-datachannel missing"); }
-    const dc = this.pc.createDataChannel(label, { ordered: true });
-    const wrapped = new NodeRTCDataChannel(dc);
-    this.channels.set(label, wrapped);
-    return wrapped;
+  createDataChannel(label: string, _opts: any): NodeRTCDataChannel {
+    const dc = this.pc.createDataChannel(label);
+    const nodeDC = new NodeRTCDataChannel(dc);
+    this.channels.set(label, nodeDC);
+    return nodeDC;
   }
 
   async createOffer(): Promise<RTCSessionDescriptionInit> {
-    return new Promise((resolve, reject) => {
-      this.pc.onLocalDescription((sdp: string, type: string) => {
-        resolve({ type: type as RTCSdpType, sdp });
-      });
-      try {
-        this.pc.setLocalDescription();
-      } catch (e) {
-        reject(e);
-      }
-    });
+    return { type: "offer", sdp: this.pc.localDescription() };
   }
 
   async createAnswer(): Promise<RTCSessionDescriptionInit> {
-    // In node-datachannel, answer is created automatically after setRemoteDescription
-    return new Promise((resolve) => {
-      this.pc.onLocalDescription((sdp: string, type: string) => {
-        resolve({ type: type as RTCSdpType, sdp });
-      });
-    });
+    return { type: "answer", sdp: this.pc.localDescription() };
   }
 
-  async setLocalDescription(desc?: RTCSessionDescriptionInit): Promise<void> {
-    if (desc?.sdp) {
-      this.pc.setLocalDescription(desc.sdp, desc.type);
+  async setLocalDescription(desc: RTCSessionDescriptionInit): Promise<void> {
+    if (desc.sdp) {
+      this.pc.setLocalDescription(desc.sdp);
     }
-    // If no desc, node-datachannel auto-generates on createOffer
   }
 
   async setRemoteDescription(desc: RTCSessionDescriptionInit): Promise<void> {
-    if (!desc.sdp) throw new Error("Missing SDP");
-    this.pc.setRemoteDescription(desc.sdp, desc.type);
+    if (desc.type === "offer") {
+      this.pc.setRemoteDescription(desc.sdp, "offer");
+    } else {
+      this.pc.setRemoteDescription(desc.sdp, "answer");
+    }
   }
 
   async addIceCandidate(candidate: RTCIceCandidateInit): Promise<void> {
     if (candidate.candidate) {
-      this.pc.addRemoteCandidate(candidate.candidate, candidate.sdpMid ?? "0");
+      this.pc.addRemoteCandidate(candidate.candidate, candidate.sdpMid || "0");
     }
   }
 
@@ -136,46 +123,20 @@ class NodeRTCPeerConnection {
   }
 }
 
-// ── DataChannel wrapper ───────────────────────────────────────────────────
-
 class NodeRTCDataChannel {
-  private dc: any;
-  private _readyState: RTCDataChannelState = "connecting";
+  onopen:    (() => void) | null = null;
+  onmessage: ((ev: { data: any }) => void) | null = null;
+  onclose:   (() => void) | null = null;
+  onerror:   ((e: any) => void) | null = null;
 
-  onopen:    ((ev: Event) => void) | null = null;
-  onmessage: ((ev: MessageEvent) => void) | null = null;
-  onerror:   ((ev: Event) => void) | null = null;
-  onclose:   ((ev: Event) => void) | null = null;
-
-  get readyState(): RTCDataChannelState { return this._readyState; }
-
-  constructor(dc: any) {
-    this.dc = dc;
-
-    dc.onOpen(() => {
-      this._readyState = "open";
-      this.onopen?.({} as Event);
-    });
-
-    dc.onMessage((msg: string | Buffer) => {
-      const data = typeof msg === "string" ? msg : msg.toString("utf8");
-      this.onmessage?.({ data } as MessageEvent);
-    });
-
-    dc.onError((err: string) => {
-      this.onerror?.({ message: err } as unknown as Event);
-    });
-
-    dc.onClosed(() => {
-      this._readyState = "closed";
-      this.onclose?.({} as Event);
-    });
+  constructor(private dc: any) {
+    this.dc.onOpen(() => this.onopen?.());
+    this.dc.onMessage((data: any) => this.onmessage?.({ data }));
+    this.dc.onClosed(() => this.onclose?.());
+    this.dc.onError((err: string) => this.onerror?.(err));
   }
 
   send(data: string): void {
-    if (this._readyState !== "open") {
-      throw new Error("DataChannel is not open");
-    }
     this.dc.sendMessage(data);
   }
 
@@ -184,16 +145,12 @@ class NodeRTCDataChannel {
   }
 }
 
-// ── Install into global scope ─────────────────────────────────────────────
+// ── Entry point ──────────────────────────────────────────────────────────
 
-/**
- * Call once before creating any RTCPeerConnection in Node.js.
- * No-op in browser environments where RTCPeerConnection already exists.
- */
 export function installWebRTCPolyfill(): void {
-  if (typeof globalThis.RTCPeerConnection !== "undefined") return; // browser — skip
-
-  (globalThis as any).RTCPeerConnection = NodeRTCPeerConnection;
-  (globalThis as any).RTCDataChannel    = NodeRTCDataChannel;
-  console.log("[webrtc-polyfill] Installed node-datachannel shim");
+  if (typeof (global as any).RTCPeerConnection === "undefined") {
+    console.log("[webrtc-polyfill] Installed node-datachannel shim");
+    (global as any).RTCPeerConnection = NodeRTCPeerConnection;
+    (global as any).RTCDataChannel = NodeRTCDataChannel;
+  }
 }
