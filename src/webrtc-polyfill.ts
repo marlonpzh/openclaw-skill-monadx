@@ -6,7 +6,7 @@
 // ─────────────────────────────────────────────
 
 import { createRequire } from "module";
-const require = createRequire(import.meta.url);
+const require = require = createRequire(import.meta.url);
 
 type RTCSdpType = "offer" | "answer" | "pranswer" | "rollback";
 
@@ -43,6 +43,7 @@ class NodeRTCPeerConnection {
       this.onconnectionstatechange?.();
     });
     this.pc.onLocalCandidate((candidate: string, mid: string) => {
+      console.log(`[webrtc-polyfill] Generated local candidate: ${candidate.slice(0, 20)}...`);
       this.onicecandidate?.({ candidate: { candidate, sdpMid: mid, sdpMLineIndex: 0 } });
     });
     this.pc.onDataChannel((dc: any) => {
@@ -68,11 +69,14 @@ class NodeRTCPeerConnection {
     if (!desc.sdp) return;
     try {
       this.pc.setLocalDescription(desc.sdp, desc.type);
+      console.log(`[webrtc-polyfill] setLocalDescription success (order: sdp, type)`);
     } catch {
       try {
         this.pc.setLocalDescription(desc.type, desc.sdp);
+        console.log(`[webrtc-polyfill] setLocalDescription success (order: type, sdp)`);
       } catch (e: any) {
-        console.warn(`[webrtc-polyfill] setLocalDescription failed definitely: ${e.message}`);
+        console.error(`[webrtc-polyfill] setLocalDescription CRITICAL FAILURE: ${e.message}`);
+        throw e; // Must throw to let handshake fail early
       }
     }
   }
@@ -81,17 +85,21 @@ class NodeRTCPeerConnection {
     if (!desc.sdp) return;
     try {
       this.pc.setRemoteDescription(desc.sdp, desc.type);
+      console.log(`[webrtc-polyfill] setRemoteDescription success (order: sdp, type)`);
     } catch {
       try {
         this.pc.setRemoteDescription(desc.type, desc.sdp);
+        console.log(`[webrtc-polyfill] setRemoteDescription success (order: type, sdp)`);
       } catch (e: any) {
-        console.warn(`[webrtc-polyfill] setRemoteDescription failed definitely: ${e.message}`);
+        console.error(`[webrtc-polyfill] setRemoteDescription CRITICAL FAILURE: ${e.message}`);
+        throw e;
       }
     }
   }
 
   async addIceCandidate(candidate: RTCIceCandidateInit): Promise<void> {
     if (candidate.candidate) {
+      console.log(`[webrtc-polyfill] Adding remote candidate: ${candidate.candidate.slice(0, 20)}...`);
       this.pc.addRemoteCandidate(candidate.candidate, candidate.sdpMid || "0");
     }
   }
@@ -116,7 +124,7 @@ class NodeRTCDataChannel {
 
 export function installWebRTCPolyfill(): void {
   if (typeof (global as any).RTCPeerConnection === "undefined") {
-    console.log("[webrtc-polyfill] Installed robust dual-strategy shim");
+    console.log("[webrtc-polyfill] Installed robust dual-strategy shim with debug logs");
     (global as any).RTCPeerConnection = NodeRTCPeerConnection;
     (global as any).RTCDataChannel = NodeRTCDataChannel;
   }
