@@ -181,6 +181,12 @@ export class HandshakeManager {
     if (signal.action === "accept") {
       const conn = this.pending.get(signal.from_node_id);
       if (!conn) return;
+
+      // 🛠️ Fix: Avoid infinite re-initiating. If we are already connected 
+      // or connecting, don't restart a brand new WebRTC session.
+      if (conn.rtcConn && (conn.status === "connected" || conn.status === "accepted")) {
+        return; 
+      }
       conn.status = "accepted";
       
       // 🛡️ Guard: Only initiate WebRTC if the node is capable (e.g. Daemon)
@@ -281,10 +287,22 @@ export class HandshakeManager {
     if (msg.type === "ice") {
       const rtcConn = conn?.rtcConn;
       if (!rtcConn) return;
-      try {
-        const candidate = JSON.parse(msg.data) as RTCIceCandidateInit;
-        await rtcConn.addIceCandidate(candidate);
-      } catch { /* ignore stale candidates */ }
+      
+      const MAX_RETRIES = 10;
+      let retries = 0;
+      const tryAdd = async () => {
+        try {
+          const candidate = JSON.parse(msg.data) as RTCIceCandidateInit;
+          await rtcConn.addIceCandidate(candidate);
+          console.log(`[handshake] ICE candidate added for ${msg.from_node_id.slice(0, 8)}…`);
+        } catch (e) {
+          if (retries < MAX_RETRIES) {
+            retries++;
+            setTimeout(tryAdd, 500);
+          }
+        }
+      };
+      tryAdd();
     }
   }
 
@@ -298,6 +316,7 @@ export class HandshakeManager {
       iceServers: [
         { urls: "stun:stun.l.google.com:19302" },
         { urls: "stun:stun1.l.google.com:19302" },
+        { urls: "stun:stun.qq.com:10240" },
       ],
     });
 
