@@ -210,16 +210,21 @@ export class P2PNetwork {
   // ── WebRTC 信令中继 ───────────────────────────────────────────────────────
 
   sendSignal(msg: SignalMessage): void {
-    const key = [msg.to_node_id, msg.type, msg.timestamp].join(":");
+    const key = `${msg.to_node_id}:${msg.type}:${msg.timestamp}:${Math.random().toString(36).slice(2, 8)}`;
     this.gun.get(NS_SIGNALS).get(key).put(msg);
   }
 
   listenSignals(): void {
+    const minTimestamp = Math.floor(Date.now() / 1000) - 60; // Ignore signals older than 1 min
     this.gun.get(NS_SIGNALS).map().on((data: unknown) => {
       if (!data || typeof data !== "object") return;
+      
       const { _: _meta, ...clean } = data as Record<string, unknown>;
       const msg = clean as unknown as SignalMessage;
+      
       if (!msg.to_node_id || msg.to_node_id !== this.nodeId) return;
+      if (msg.timestamp < minTimestamp) return; // 🛡️ Skip stale signals
+      
       this.signalHandlers.forEach((h) => h(msg));
     });
   }
