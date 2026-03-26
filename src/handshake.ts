@@ -14,6 +14,7 @@ import type { KeyPair } from "./identity.js";
 import type { P2PNetwork } from "./network.js";
 import { sign, encryptFor, decryptFrom } from "./identity.js";
 import { readFileSync, existsSync } from "fs";
+import { installWebRTCPolyfill } from "./webrtc-polyfill.js";
 
 // ── Pending connection state ─────────────────────────────────────────────
 
@@ -23,8 +24,8 @@ interface PendingConnection {
   status:        "proposed" | "accepted" | "connected";
   docPath:       string;
   onDoc?:        (text: string, peerNodeId: string) => void;
-  rtcConn?:      RTCPeerConnection;
-  dataChannel?:  RTCDataChannel;
+  rtcConn?:      any;
+  dataChannel?:  any;
 }
 
 // ── Handshake manager ────────────────────────────────────────────────────
@@ -47,6 +48,7 @@ export class HandshakeManager {
     network:  P2PNetwork;
     docPath:  string;
   }) {
+    installWebRTCPolyfill();
     this.keyPair = opts.keyPair;
     this.network = opts.network;
     this.docPath = opts.docPath;
@@ -178,8 +180,14 @@ export class HandshakeManager {
       const conn = this.pending.get(signal.from_node_id);
       if (!conn) return;
       conn.status = "accepted";
-      console.log("[handshake] Peer accepted — initiating WebRTC offer…");
-      this.initiateWebRTC(signal.from_node_id);
+      
+      // 🛡️ Guard against missing WebRTC polyfill in some environments
+      if (typeof RTCPeerConnection !== "undefined") {
+        console.log("[handshake] Peer accepted — initiating WebRTC offer…");
+        this.initiateWebRTC(signal.from_node_id);
+      } else {
+        console.log("[handshake] Peer accepted, but WebRTC is unavailable on this node. Use the background daemon for direct P2P connection.");
+      }
     }
 
     if (signal.action === "decline") {
@@ -226,6 +234,12 @@ export class HandshakeManager {
     const conn = this.pending.get(msg.from_node_id);
 
     if (msg.type === "offer") {
+      // 🛡️ Guard against missing WebRTC polyfill
+      if (typeof RTCPeerConnection === "undefined") {
+        console.warn("[handshake] WebRTC offer received, but WebRTC is unavailable on this node.");
+        return;
+      }
+
       // We are the answerer — create connection and answer
       const rtcConn = this.createRTCConnection(msg.from_node_id);
       if (conn) conn.rtcConn = rtcConn;
@@ -272,7 +286,12 @@ export class HandshakeManager {
     }
   }
 
-  private createRTCConnection(peerNodeId: string): RTCPeerConnection {
+  private createRTCConnection(peerNodeId: string): any {
+    const RTCPeerConnection = (globalThis as any).RTCPeerConnection;
+    if (!RTCPeerConnection) {
+      throw new Error("[handshake] RTCPeerConnection polyfill not installed. Call installWebRTCPolyfill() first.");
+    }
+
     const rtcConn = new RTCPeerConnection({
       iceServers: [
         { urls: "stun:stun.l.google.com:19302" },
@@ -304,7 +323,7 @@ export class HandshakeManager {
 
   // ── DataChannel: document exchange ───────────────────────────────────
 
-  private wireDataChannel(dc: RTCDataChannel, peerNodeId: string): void {
+  private wireDataChannel(dc: any, peerNodeId: string): void {
     dc.onopen = () => {
       console.log(`[handshake] DataChannel open with ${peerNodeId.slice(0, 16)}…`);
       const conn = this.pending.get(peerNodeId);

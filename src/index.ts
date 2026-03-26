@@ -24,19 +24,19 @@ import { BroadcastScheduler } from "./scheduler.js";
 
 // ── Boot ──────────────────────────────────────────────────────────────────
 
-// We will initialize polyfill after Gun.js boots to prevent Gun from hijacking it.
+// 🛡️ WebRTC Polyfill (MUST be at the very top to avoid ReferenceErrors)
+const isCLI = process.argv[1]?.endsWith("index.ts") || process.argv[1]?.endsWith("index.js");
+const cliCmd = isCLI ? (process.argv[2] ?? "help") : "none";
+const isDaemon = cliCmd === "daemon" || !isCLI;
+
+if (cliCmd !== "help") {
+  installWebRTCPolyfill();
+}
 
 const DATA_DIR = join(homedir(), ".monadx");
-
 mkdirSync(DATA_DIR, { recursive: true });
 
 const cfg = loadConfig(DATA_DIR);
-
-// monadx_ROLE env var overrides config file (convenient for quick switching)
-const NODE_ROLE = (process.env.monadx_ROLE ?? cfg.role) as "seeker" | "employer";
-
-const keyPair = loadOrCreateIdentity(DATA_DIR);
-const profile = buildProfile(DATA_DIR, NODE_ROLE, keyPair);
 
 // 🔍 Auto-Configuration: Silent IM Push Binding
 // If an Agent passes its callback URL via MONADX_PUSH_URL env var, we lock it in!
@@ -48,7 +48,7 @@ if (process.env.MONADX_PUSH_URL && process.env.MONADX_PUSH_URL !== cfg.network.p
     console.log(`[config] 🛡️ IM Push EndPoint 已自动绑定: ${cfg.network.push_webhook}`);
     
     // Auto-Restart Daemon if we are in CLI mode to ensure it picks up the change
-    if (!process.argv.includes("stop")) {
+    if (isCLI && !process.argv.includes("stop")) {
       const { exec } = await import("child_process");
       exec("pm2 restart monadx-agent > /dev/null 2>&1 || true");
     }
@@ -57,26 +57,23 @@ if (process.env.MONADX_PUSH_URL && process.env.MONADX_PUSH_URL !== cfg.network.p
   }
 }
 
-const isCLI = process.argv[1]?.endsWith("index.ts") || process.argv[1]?.endsWith("index.js");
-const cliCmd = isCLI ? (process.argv[2] ?? "help") : "none";
-const isDaemon = cliCmd === "daemon" || !isCLI;
+const keyPair = loadOrCreateIdentity(DATA_DIR);
+
+// monadx_ROLE env var overrides config file (convenient for quick switching)
+const NODE_ROLE = (process.env.monadx_ROLE ?? cfg.role) as "seeker" | "employer";
+const profile = buildProfile(DATA_DIR, NODE_ROLE, keyPair);
 
 const network = new P2PNetwork({
   nodeId: keyPair.nodeId,
   dataDir: DATA_DIR,
   peers: cfg.network.bootstrap_peers,
   ttlSeconds: cfg.network.peer_ttl_seconds,
-  radisk: isDaemon, // 🛠️ Fix: CLI tools (match/propose/etc) bypass file locking
+  radisk: isDaemon, // 🛠️ Fix: CLI tools bypass file locking
 });
 
-// Install polyfill *after* Gun.js has safely bound to pure WebSockets.
-// 🛠️ Fix: Only install WebRTC polyfill for the background daemon to avoid 
-// unnecessary process overhead and potential binary hangs in CLI tools.
-if (isDaemon) {
-  installWebRTCPolyfill();
-}
-
 const reputation = new ReputationStore(DATA_DIR, network);
+
+// 🔍 Auto-Configuration: Silent IM Push Binding
 
 const handshake = new HandshakeManager({
   keyPair,
