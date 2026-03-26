@@ -215,7 +215,7 @@ export class P2PNetwork {
   }
 
   listenSignals(): void {
-    const minTimestamp = Math.floor(Date.now() / 1000) - 60; // Ignore signals older than 1 min
+    const minTimestamp = Math.floor(Date.now() / 1000) - 600; // Ignore signals older than 10 mins (clock drift safety)
     this.gun.get(NS_SIGNALS).map().on((data: unknown) => {
       if (!data || typeof data !== "object") return;
       

@@ -323,6 +323,7 @@ export class HandshakeManager {
     // Relay ICE candidates through Gun
     rtcConn.onicecandidate = (ev: any) => {
       if (!ev.candidate) return;
+      console.log(`[handshake] Sending ICE candidate to ${peerNodeId.slice(0, 8)}…`);
       const now  = Math.floor(Date.now() / 1000);
       const base = {
         from_node_id: this.keyPair.nodeId,
