@@ -99,16 +99,24 @@ class NodeRTCPeerConnection {
   }
 
   async setLocalDescription(desc: RTCSessionDescriptionInit): Promise<void> {
-    if (desc.sdp) {
-      this.pc.setLocalDescription(desc.sdp, desc.type);
+    if (!desc.sdp) return;
+    try {
+      this.pc.setLocalDescription(desc.sdp);
+    } catch (e: any) {
+      console.warn(`[webrtc-polyfill] setLocalDescription failed (likely harmless race): ${e.message}`);
     }
   }
 
   async setRemoteDescription(desc: RTCSessionDescriptionInit): Promise<void> {
-    if (desc.type === "offer") {
-      this.pc.setRemoteDescription(desc.sdp, "offer");
-    } else {
-      this.pc.setRemoteDescription(desc.sdp, "answer");
+    if (!desc.sdp) return;
+    try {
+      if (desc.type === "offer") {
+        this.pc.setRemoteDescription(desc.sdp, "offer");
+      } else {
+        this.pc.setRemoteDescription(desc.sdp, "answer");
+      }
+    } catch (e: any) {
+      console.warn(`[webrtc-polyfill] setRemoteDescription failed: ${e.message}`);
     }
   }
 
