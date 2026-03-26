@@ -107,9 +107,11 @@ export class HandshakeManager {
    */
   accept(peerNodeId: string): void {
     const conn = this.pending.get(peerNodeId);
+    
+    // 🛠️ Fix: For CLI tools, the pending map is empty. We should allow 
+    // forced acceptance signals as long as we have the peerNodeId.
     if (!conn) {
-      console.warn("[handshake] No pending proposal from", peerNodeId.slice(0, 16));
-      return;
+      console.log(`[handshake] Initiating stateless accept for ${peerNodeId.slice(0, 16)}…`);
     }
 
     const now  = Math.floor(Date.now() / 1000);
@@ -123,7 +125,9 @@ export class HandshakeManager {
     const signal: IntentSignal = { ...base, sig: sign(base as Record<string, unknown>, this.keyPair) };
     this.network.sendIntent(signal);
 
-    conn.status = "accepted";
+    if (conn) {
+      conn.status = "accepted";
+    }
     console.log(`[handshake] Accepted proposal from ${peerNodeId.slice(0, 16)}…`);
   }
 

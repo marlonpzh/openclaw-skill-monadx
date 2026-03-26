@@ -70,7 +70,11 @@ const network = new P2PNetwork({
 });
 
 // Install polyfill *after* Gun.js has safely bound to pure WebSockets.
-installWebRTCPolyfill();
+// 🛠️ Fix: Only install WebRTC polyfill for the background daemon to avoid 
+// unnecessary process overhead and potential binary hangs in CLI tools.
+if (isDaemon) {
+  installWebRTCPolyfill();
+}
 
 const reputation = new ReputationStore(DATA_DIR, network);
 
@@ -379,8 +383,8 @@ async function runCLI(args: string[]): Promise<void> {
   const cmd = args[0] ?? "help";
   const rest = args.slice(1);
 
-  // status/match/deepmatch 需要等 Gun.js 初始化和同步
-  const WAIT_CMDS = new Set(["match", "deepmatch", "status"]);
+  // status/match/deepmatch/propose... 需要等 Gun.js 初始化和同步
+  const WAIT_CMDS = new Set(["match", "deepmatch", "status", "propose", "accept", "decline", "send", "rate", "broadcast"]);
   const delay = WAIT_CMDS.has(cmd) ? 3000 : 0;
 
   if (cmd === "help" || cmd === "--help" || cmd === "-h") {
